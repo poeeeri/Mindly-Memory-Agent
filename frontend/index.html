@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mindly Memory Agent</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #202124;
+        background: #f6f7f9;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100vh;
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 16px;
+      }
+
+      h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      input,
+      select,
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        border: 1px solid #d4d8df;
+        border-radius: 6px;
+        background: #fff;
+        padding: 10px 12px;
+      }
+
+      #chat {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px 0;
+      }
+
+      .message {
+        max-width: 78%;
+        padding: 12px 14px;
+        border-radius: 8px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      .user {
+        align-self: flex-end;
+        background: #dceeff;
+      }
+
+      .assistant {
+        align-self: flex-start;
+        background: #fff;
+        border: 1px solid #e2e5ea;
+      }
+
+      .message p {
+        margin: 0 0 8px;
+      }
+
+      .message p:last-child,
+      .message ul:last-child,
+      .message pre:last-child {
+        margin-bottom: 0;
+      }
+
+      .message ul {
+        margin: 0 0 8px;
+        padding-left: 20px;
+      }
+
+      .message h1,
+      .message h2,
+      .message h3 {
+        font-size: 16px;
+        line-height: 1.3;
+        margin: 0 0 8px;
+      }
+
+      .message code {
+        background: rgba(0, 0, 0, 0.07);
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+
+      .message pre {
+        overflow-x: auto;
+        margin: 0 0 8px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #202124;
+        color: #f6f7f9;
+      }
+
+      .message pre code {
+        background: transparent;
+        padding: 0;
+      }
+
+      form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        padding-top: 16px;
+      }
+
+      textarea {
+        min-height: 48px;
+        resize: vertical;
+      }
+
+      button {
+        border: 0;
+        border-radius: 6px;
+        background: #1f6feb;
+        color: #fff;
+        padding: 0 18px;
+        cursor: pointer;
+      }
+
+      .secondary {
+        background: #eef1f5;
+        color: #202124;
+      }
+
+      .danger {
+        background: #d1242f;
+      }
+
+      button:disabled {
+        background: #9aa4b2;
+        cursor: wait;
+      }
+
+      @media (max-width: 700px) {
+        main {
+          padding: 14px;
+        }
+
+        header,
+        .controls {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .message {
+          max-width: 92%;
+        }
+
+        form {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          min-height: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Mindly Memory Agent</h1>
+        <div class="controls">
+          <select id="userId" aria-label="User ID">
+            <option value="demo_user">demo_user</option>
+            <option value="user_1">user_1</option>
+            <option value="user_2">user_2</option>
+          </select>
+          <select id="persona" aria-label="Persona">
+            <option value="wellness_friend">wellness_friend</option>
+            <option value="tough_love">tough_love</option>
+          </select>
+          <div class="toolbar">
+            <button class="secondary" id="newChat" type="button">Новый чат</button>
+            <button class="danger" id="forgetAll" type="button">Забыть всё</button>
+          </div>
+        </div>
+      </header>
+
+      <section id="chat" aria-live="polite"></section>
+
+      <form id="chatForm">
+        <textarea id="message" placeholder="Напишите сообщение..." required></textarea>
+        <button id="send" type="submit">Отправить</button>
+      </form>
+    </main>
+
+    <script>
+      const chat = document.querySelector("#chat");
+      const form = document.querySelector("#chatForm");
+      const messageInput = document.querySelector("#message");
+      const sendButton = document.querySelector("#send");
+      const userId = document.querySelector("#userId");
+      const persona = document.querySelector("#persona");
+      const newChatButton = document.querySelector("#newChat");
+      const forgetAllButton = document.querySelector("#forgetAll");
+      const histories = new Map();
+
+      function currentKey() {
+        return userId.value.trim() || "demo_user";
+      }
+
+      function currentHistory() {
+        const key = currentKey();
+        if (!histories.has(key)) histories.set(key, []);
+        return histories.get(key);
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderInlineMarkdown(value) {
+        return escapeHtml(value)
+          .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+          .replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      }
+
+      function renderMarkdown(markdown) {
+        const lines = markdown.split(/\r?\n/);
+        const html = [];
+        let inCode = false;
+        let listOpen = false;
+
+        for (const line of lines) {
+          if (line.trim().startsWith("```")) {
+            if (inCode) {
+              html.push("</code></pre>");
+            } else {
+              if (listOpen) {
+                html.push("</ul>");
+                listOpen = false;
+              }
+              html.push("<pre><code>");
+            }
+            inCode = !inCode;
+            continue;
+          }
+
+          if (inCode) {
+            html.push(`${escapeHtml(line)}\n`);
+            continue;
+          }
+
+          const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+          if (bullet) {
+            if (!listOpen) {
+              html.push("<ul>");
+              listOpen = true;
+            }
+            html.push(`<li>${renderInlineMarkdown(bullet[1])}</li>`);
+            continue;
+          }
+
+          if (listOpen) {
+            html.push("</ul>");
+            listOpen = false;
+          }
+
+          if (/^#{1,3}\s+/.test(line)) {
+            const level = line.match(/^#+/)[0].length;
+            html.push(`<h${level}>${renderInlineMarkdown(line.replace(/^#{1,3}\s+/, ""))}</h${level}>`);
+          } else if (line.trim()) {
+            html.push(`<p>${renderInlineMarkdown(line)}</p>`);
+          }
+        }
+
+        if (listOpen) html.push("</ul>");
+        if (inCode) html.push("</code></pre>");
+        return html.join("");
+      }
+
+      function addMessage(role, content = "") {
+        const node = document.createElement("div");
+        node.className = `message ${role}`;
+        node.innerHTML = renderMarkdown(content);
+        chat.appendChild(node);
+        chat.scrollTop = chat.scrollHeight;
+        return node;
+      }
+
+      function updateAssistantMessage(node, content) {
+        node.innerHTML = renderMarkdown(content);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      function renderCurrentChat() {
+        chat.innerHTML = "";
+        for (const item of currentHistory()) {
+          addMessage(item.role, item.content);
+        }
+      }
+
+      userId.addEventListener("change", renderCurrentChat);
+
+      newChatButton.addEventListener("click", () => {
+        histories.set(currentKey(), []);
+        renderCurrentChat();
+        messageInput.focus();
+      });
+
+      forgetAllButton.addEventListener("click", async () => {
+        forgetAllButton.disabled = true;
+        try {
+          const response = await fetch(`/memory/all?user_id=${encodeURIComponent(currentKey())}`, {
+            method: "DELETE",
+          });
+          const result = await response.json();
+          histories.set(currentKey(), []);
+          renderCurrentChat();
+          addMessage("assistant", `Память пользователя очищена. Удалено записей: **${result.deleted}**.`);
+        } catch (error) {
+          addMessage("assistant", `Ошибка удаления: ${error.message}`);
+        } finally {
+          forgetAllButton.disabled = false;
+        }
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        const history = currentHistory();
+        addMessage("user", content);
+        history.push({ role: "user", content });
+        messageInput.value = "";
+        sendButton.disabled = true;
+
+        const assistantNode = addMessage("assistant");
+        let assistantText = "";
+
+        try {
+          const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: userId.value.trim() || "demo_user",
+              persona: persona.value,
+              message: content,
+              history: history.slice(-8),
+            }),
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            assistantText += decoder.decode(value, { stream: true });
+            updateAssistantMessage(assistantNode, assistantText);
+          }
+          history.push({ role: "assistant", content: assistantText });
+        } catch (error) {
+          assistantNode.textContent = `Ошибка: ${error.message}`;
+        } finally {
+          sendButton.disabled = false;
+          messageInput.focus();
+        }
+      });
+    </script>
+  </body>
+</html>
