@@ -342,12 +342,32 @@
         }
       }
 
-      userId.addEventListener("change", renderCurrentChat);
-
-      newChatButton.addEventListener("click", () => {
-        histories.set(currentKey(), []);
+      async function loadCurrentChatFromBackend() {
+        try {
+          const response = await fetch(`/chat/history?user_id=${encodeURIComponent(currentKey())}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          histories.set(currentKey(), result.history || []);
+        } catch (error) {
+          histories.set(currentKey(), []);
+        }
         renderCurrentChat();
-        messageInput.focus();
+      }
+
+      userId.addEventListener("change", loadCurrentChatFromBackend);
+
+      newChatButton.addEventListener("click", async () => {
+        newChatButton.disabled = true;
+        try {
+          await fetch(`/chat/history?user_id=${encodeURIComponent(currentKey())}`, {
+            method: "DELETE",
+          });
+          histories.set(currentKey(), []);
+          renderCurrentChat();
+          messageInput.focus();
+        } finally {
+          newChatButton.disabled = false;
+        }
       });
 
       showMemoryButton.addEventListener("click", async () => {
@@ -374,8 +394,6 @@
             method: "DELETE",
           });
           const result = await response.json();
-          histories.set(currentKey(), []);
-          renderCurrentChat();
           addMessage("assistant", `Память пользователя очищена. Удалено записей: **${result.deleted}**.`);
         } catch (error) {
           addMessage("assistant", `Ошибка удаления: ${error.message}`);
@@ -406,7 +424,6 @@
               user_id: userId.value.trim() || "demo_user",
               persona: persona.value,
               message: content,
-              history: history.slice(-8),
             }),
           });
 
@@ -430,6 +447,8 @@
           messageInput.focus();
         }
       });
+
+      loadCurrentChatFromBackend();
     </script>
   </body>
 </html>

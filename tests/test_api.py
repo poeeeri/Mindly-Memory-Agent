@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.main import app, memory
+from app.main import app, chat_history, memory, mindly_graph
 
 
 def test_memory_debug_endpoint_lists_structured_facts() -> None:

@@ -59,6 +59,13 @@ Memory records are stored as structured facts:
 }
 ```
 
+Short-term chat history is separate from long-term memory:
+
+- `GET /chat/history?user_id=...` returns the current dialog history.
+- `DELETE /chat/history?user_id=...` clears only the current dialog.
+- `POST /chat/new?user_id=...` starts a new chat by clearing only dialog history.
+- `DELETE /memory/all?user_id=...` clears only long-term facts.
+
 ## Tests
 
 ```bash
