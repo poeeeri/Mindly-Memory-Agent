@@ -6,7 +6,12 @@ MVP of a conversational agent with persistent long-term memory. The first slice 
 WebUI -> FastAPI -> LangGraph -> OpenRouter -> streaming response
 ```
 
-Long-term storage is currently represented by in-process `FactMemory`, so the agent architecture is ready for MemPalace/Chroma without blocking on infrastructure. `DummyMemory` remains as a backwards-compatible alias in tests and imports.
+Long-term storage can run in two modes:
+
+- `MEMORY_BACKEND=fact`: in-process `FactMemory`, useful for fast tests.
+- `MEMORY_BACKEND=mempalace`: persistent MemPalace/Chroma storage under `MEMPALACE_PATH`.
+
+`DummyMemory` remains as a backwards-compatible alias in tests and imports.
 
 ## Run locally
 

@@ -358,8 +358,8 @@
           const result = await response.json();
           const content = result.facts.length
             ? result.facts.map((fact) => `- ${fact.text}`).join("\n")
-            : "Память текущего пользователя пуста.";
-          addMessage("assistant", `### Память пользователя\n${content}`);
+            : "Долговременная память текущего пользователя пуста. Контекст текущего открытого чата все еще передается модели как краткосрочная история.";
+          addMessage("assistant", `### Долговременная память пользователя\n${content}`);
         } catch (error) {
           addMessage("assistant", `Ошибка чтения памяти: ${error.message}`);
         } finally {

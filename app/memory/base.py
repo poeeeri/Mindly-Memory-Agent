@@ -9,6 +9,9 @@ class MemoryStore(Protocol):
     def add(self, user_id: str, text: str) -> None:
         ...
 
+    def add_fact(self, user_id: str, fact_text: str, source: str = "user_message") -> None:
+        ...
+
     def forget(self, user_id: str, query: str) -> int:
         ...
 

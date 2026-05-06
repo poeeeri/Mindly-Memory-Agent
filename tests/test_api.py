@@ -12,7 +12,7 @@ def test_memory_debug_endpoint_lists_structured_facts() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["facts"][0]["text"] == "Пользователя зовут Анна."
+    assert payload["facts"][0]["text"] == "Меня зовут Анна."
     assert payload["facts"][0]["source"] == "user_message"
 
 

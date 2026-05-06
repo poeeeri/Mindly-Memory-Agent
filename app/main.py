@@ -11,7 +11,7 @@ from app.config import get_settings
 from app.graph import MindlyGraph, make_initial_state
 from app.llm import OpenRouterClient
 from app.logging_config import configure_logging
-from app.memory import FactMemory
+from app.memory.factory import build_fact_extractor, build_memory
 from app.memory.models import MemoryFact
 from app.state import ChatMessage
 
@@ -33,10 +33,12 @@ if frontend_dir.exists():
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 # память временно заменена на объект заглушки
-memory = FactMemory()
+llm_client = OpenRouterClient(settings)
+memory = build_memory(settings)
 mindly_graph = MindlyGraph(
     memory=memory,
-    llm=OpenRouterClient(settings),
+    llm=llm_client,
+    fact_extractor=build_fact_extractor(settings, llm_client),
     history_window=settings.history_window,
 )
 

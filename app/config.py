@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     openrouter_app_title: str = "Mindly Memory Agent"
     use_fake_llm: bool = False
     history_window: int = 8
+    memory_backend: str = "fact"
+    mempalace_path: str = "data/mempalace"
+    mempalace_collection: str = "mindly_memory_facts"
+    fact_extractor: str = "llm"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

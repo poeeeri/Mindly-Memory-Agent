@@ -7,6 +7,7 @@ from langgraph.graph import END, StateGraph
 
 from app.llm import OpenRouterClient, OpenRouterError
 from app.memory.base import MemoryStore
+from app.memory.extractor import FactExtractionError, FactExtractor
 from app.prompts import build_prompt
 from app.state import AgentState, ChatMessage
 
@@ -15,7 +16,11 @@ logger = logging.getLogger(__name__)
 
 # память агента спрятана за интерфейсом MemoryStore, чтобы потом заменить на MemPalace
 class MindlyGraph:
-    def __init__(self, *, memory: MemoryStore, llm: OpenRouterClient, history_window: int = 8) -> None:
+    def __init__(
+        self, *, memory: MemoryStore, llm: OpenRouterClient, 
+        fact_extractor: FactExtractor | None = None,
+        history_window: int = 8,
+    ) -> None:
         """
         создаем два графа: один - полный граф, включая генерацию ответа LLM (graph), другой - граф без генерации (prep_graph 
         при стриминге, чтобы сначала собрать промпт и найти релевантную память, а потом уже стримить токены напрямую из LLM);
@@ -23,6 +28,9 @@ class MindlyGraph:
         """
         self.memory = memory
         self.llm = llm
+        if fact_extractor is None:
+            raise ValueError("fact_extractor is required")
+        self.fact_extractor = fact_extractor
         self.history_window = history_window
         self.graph = self._compile_graph(include_generation=True)
         self.prep_graph = self._compile_graph(include_generation=False)
@@ -85,14 +93,23 @@ class MindlyGraph:
         response = await self.llm.complete_chat(state["prompt_messages"])
         return {**state, "response": response}
 
-    def save_memory(self, state: AgentState) -> AgentState:
+    async def save_memory(self, state: AgentState) -> AgentState:
         # если это forget-команда - ничего не сохраняем
         if state.get("forget_command"):
             return state
-        text = state["message"].strip()
-        if text:
-            self.memory.add(state["user_id"], text)
-            logger.info("memory.add user_id=%s", state["user_id"])
+
+        try:
+            facts = await self.fact_extractor.extract(state["message"].strip())
+        except (FactExtractionError, OpenRouterError) as exc:
+            logger.warning("memory.fact_extraction_failed user_id=%s detail=%s", state["user_id"], exc)
+            return state
+        for fact in facts:
+            self.memory.add_fact(
+                user_id=state["user_id"],
+                fact_text=fact.text,
+                source=f"extractor:{fact.kind}",
+            )
+        logger.info("memory.add_facts user_id=%s count=%s", state["user_id"], len(facts))
         return state
 
     @staticmethod
@@ -138,7 +155,7 @@ class MindlyGraph:
         await self.save_after_stream(prepared, "".join(chunks))
 
     async def save_after_stream(self, state: AgentState, response: str) -> None:
-        self.save_memory({**state, "response": response})
+        await self.save_memory({**state, "response": response})
 
 
 def make_initial_state(
