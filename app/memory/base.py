@@ -1,4 +1,5 @@
 from typing import Protocol
+from app.memory.models import MemoryFact
 
 
 class MemoryStore(Protocol):
@@ -12,4 +13,7 @@ class MemoryStore(Protocol):
         ...
 
     def forget_all(self, user_id: str) -> int:
+        ...
+
+    def list_facts(self, user_id: str) -> list[MemoryFact]:
         ...

@@ -58,7 +58,7 @@ class MindlyGraph:
             deleted = self.memory.forget_all(state["user_id"])
             return {**state, "forget_command": "all", "response": f"Готово, удалено записей: {deleted}."}
 
-        match = re.match(r"^(/forget|забудь,?|забудь что)\s+(?P<query>.+)$", lowered, flags=re.IGNORECASE)
+        match = re.match(r"^(/forget|забудь,?|забудь что)\s+(?P<query>.+)$", message, flags=re.IGNORECASE)
         if match:
             query = match.group("query").strip()
             deleted = self.memory.forget(state["user_id"], query)

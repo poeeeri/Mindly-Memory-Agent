@@ -23,7 +23,7 @@ async def test_graph_generates_and_saves_memory() -> None:
     result = await graph.ainvoke(state)
 
     assert result["response"]
-    assert memory.search("user_1", "Костик") == ["У меня сын Костик"]
+    assert memory.search("user_1", "Костик") == ["У пользователя есть сын Костик."]
 
 
 # Проверяет, что память сохраняется при смене персоны
@@ -39,4 +39,4 @@ async def test_persona_switch_keeps_user_memory() -> None:
         make_initial_state(user_id="user_1", persona="tough_love", message="Что ты помнишь обо мне?")
     )
 
-    assert "У меня сын Костик" in result["memories"]
+    assert "У пользователя есть сын Костик." in result["memories"]

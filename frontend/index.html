@@ -214,6 +214,7 @@
           </select>
           <div class="toolbar">
             <button class="secondary" id="newChat" type="button">Новый чат</button>
+            <button class="secondary" id="showMemory" type="button">Память</button>
             <button class="danger" id="forgetAll" type="button">Забыть всё</button>
           </div>
         </div>
@@ -235,6 +236,7 @@
       const userId = document.querySelector("#userId");
       const persona = document.querySelector("#persona");
       const newChatButton = document.querySelector("#newChat");
+      const showMemoryButton = document.querySelector("#showMemory");
       const forgetAllButton = document.querySelector("#forgetAll");
       const histories = new Map();
 
@@ -346,6 +348,23 @@
         histories.set(currentKey(), []);
         renderCurrentChat();
         messageInput.focus();
+      });
+
+      showMemoryButton.addEventListener("click", async () => {
+        showMemoryButton.disabled = true;
+        try {
+          const response = await fetch(`/memory?user_id=${encodeURIComponent(currentKey())}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          const content = result.facts.length
+            ? result.facts.map((fact) => `- ${fact.text}`).join("\n")
+            : "Память текущего пользователя пуста.";
+          addMessage("assistant", `### Память пользователя\n${content}`);
+        } catch (error) {
+          addMessage("assistant", `Ошибка чтения памяти: ${error.message}`);
+        } finally {
+          showMemoryButton.disabled = false;
+        }
       });
 
       forgetAllButton.addEventListener("click", async () => {

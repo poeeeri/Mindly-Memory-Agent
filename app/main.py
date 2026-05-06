@@ -11,7 +11,8 @@ from app.config import get_settings
 from app.graph import MindlyGraph, make_initial_state
 from app.llm import OpenRouterClient
 from app.logging_config import configure_logging
-from app.memory import DummyMemory
+from app.memory import FactMemory
+from app.memory.models import MemoryFact
 from app.state import ChatMessage
 
 settings = get_settings()
@@ -32,7 +33,7 @@ if frontend_dir.exists():
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 # память временно заменена на объект заглушки
-memory = DummyMemory()
+memory = FactMemory()
 mindly_graph = MindlyGraph(
     memory=memory,
     llm=OpenRouterClient(settings),
@@ -49,6 +50,10 @@ class ChatRequest(BaseModel):
 
 class ForgetResult(BaseModel):
     deleted: int
+
+
+class MemoryListResponse(BaseModel):
+    facts: list[MemoryFact]
 
 
 @app.get("/")
@@ -81,6 +86,13 @@ async def forget_memory(user_id: str, query: str) -> ForgetResult:
     deleted = memory.forget(user_id, query)
     logger.info("memory.forget user_id=%s deleted=%s", user_id, deleted)
     return ForgetResult(deleted=deleted)
+
+
+@app.get("/memory")
+async def list_memory(user_id: str) -> MemoryListResponse:
+    facts = memory.list_facts(user_id)
+    logger.info("memory.list user_id=%s count=%s", user_id, len(facts))
+    return MemoryListResponse(facts=facts)
 
 
 @app.delete("/memory/all")
