@@ -30,9 +30,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
-if frontend_dir.exists():
-    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+client_dist_dir = Path(__file__).resolve().parent.parent / "client" / "dist"
+client_assets_dir = client_dist_dir / "assets"
+if client_assets_dir.exists():
+    app.mount("/assets", StaticFiles(directory=client_assets_dir), name="assets")
 
 # память временно заменена на объект заглушки
 llm_client = OpenRouterClient(settings)
@@ -61,18 +62,33 @@ class ChatHistoryResponse(BaseModel):
     history: list[ChatMessage]
 
 
+class AppConfigResponse(BaseModel):
+    model: str
+    memory_backend: str
+    fact_extractor: str
+
+
 class MemoryListResponse(BaseModel):
     facts: list[MemoryFact]
 
 
 @app.get("/")
 async def index() -> FileResponse:
-    return FileResponse(frontend_dir / "index.html")
+    return FileResponse(client_dist_dir / "index.html")
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/app-config")
+async def app_config() -> AppConfigResponse:
+    return AppConfigResponse(
+        model=settings.openrouter_model,
+        memory_backend=settings.memory_backend,
+        fact_extractor=settings.fact_extractor,
+    )
 
 
 @app.post("/chat")

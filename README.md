@@ -25,10 +25,23 @@ copy .env.example .env
 Set `OPENROUTER_API_KEY` in `.env`, then run:
 
 ```bash
+cd client
+npm install
+npm run build
+cd ..
 uvicorn app.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000`.
+
+For frontend development, run FastAPI on `8000` and Vite separately:
+
+```bash
+cd client
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. Vite proxies `/chat`, `/memory`, `/health`, and `/app-config` to FastAPI.
 
 For a local smoke test without OpenRouter, set:
 
@@ -70,4 +83,7 @@ Short-term chat history is separate from long-term memory:
 
 ```bash
 pytest
+cd client
+npm run lint
+npm run build
 ```
