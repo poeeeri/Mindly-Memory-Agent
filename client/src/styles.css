@@ -129,7 +129,7 @@
 .logout-button {
   position: sticky;
   bottom: 0;
-  margin-top: auto;
+  margin-bottom: 0;
   width: 100%;
   display: flex;
   align-items: center;
@@ -335,15 +335,13 @@
 
 .message-row {
   width: 100%;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 620px);
+  display: flex;
   gap: 12px;
   align-items: start;
   justify-content: start;
 }
 
 .message-row.user-row {
-  grid-template-columns: minmax(0, 620px) 34px;
   justify-content: end;
 }
 
@@ -363,7 +361,9 @@
 }
 
 .bubble {
-  max-width: 100%;
+  width: fit-content;
+  max-width: min(760px, calc(100% - 46px));
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px 16px;
@@ -804,7 +804,6 @@ textarea {
 
   .message-row,
   .message-row.user-row {
-    grid-template-columns: 1fr;
     justify-content: stretch;
   }
 
@@ -813,6 +812,7 @@ textarea {
   }
 
   .bubble {
+    width: auto;
     max-width: 100%;
   }
 
