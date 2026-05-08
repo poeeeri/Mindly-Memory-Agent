@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.config import get_settings
 from app.graph import MindlyGraph, make_initial_state
-from app.history import ChatHistoryStore
+from app.history import build_chat_history_store
 from app.llm import OpenRouterClient
 from app.logging_config import configure_logging
 from app.memory.factory import build_fact_extractor, build_memory
@@ -38,7 +38,11 @@ if client_assets_dir.exists():
 # память временно заменена на объект заглушки
 llm_client = OpenRouterClient(settings)
 memory = build_memory(settings)
-chat_history = ChatHistoryStore(max_messages=settings.history_window * 4)
+chat_history = build_chat_history_store(
+    backend=settings.chat_history_backend,
+    database_url=settings.database_url,
+    max_messages=settings.chat_history_max_messages,
+)
 mindly_graph = MindlyGraph(
     memory=memory,
     llm=llm_client,

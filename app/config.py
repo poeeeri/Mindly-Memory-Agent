@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     openrouter_app_title: str = "Mindly Memory Agent"
     use_fake_llm: bool = False
     history_window: int = 8
+    chat_history_backend: str = "memory"
+    chat_history_max_messages: int = 0
+    database_url: str = "postgresql://mindly:mindly@127.0.0.1:5432/mindly"
     memory_backend: str = "fact"
     mempalace_path: str = "data/mempalace"
     mempalace_collection: str = "mindly_memory_facts"
