@@ -1,0 +1,1 @@
+export const PERSONAS = ['wellness_friend', 'tough_love']
