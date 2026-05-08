@@ -1,3 +1,108 @@
 body {
   margin: 0;
 }
+
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172047;
+  background: #f5f7fd;
+  --accent: #6f5cff;
+  --accent-dark: #5142dd;
+  --accent-soft: #f0edff;
+  --border: #dfe4f4;
+  --muted: #7180a3;
+  --text: #172047;
+  --panel: #ffffff;
+  --danger: #e64f75;
+  --danger-soft: #fff1f5;
+  --success: #2fb978;
+  --shadow: 0 18px 50px rgba(46, 56, 112, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 5%, rgba(111, 92, 255, 0.08), transparent 28%),
+    linear-gradient(180deg, #fbfcff 0%, #f4f6fc 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+
+/* ===== Бейджи, тосты и тд ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 7px;
+  background: #eef8ff;
+  color: #4370b5;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge.goal {
+  background: #eef4ff;
+  color: #516bdb;
+}
+
+.badge.situation {
+  background: #fff4e9;
+  color: #cb7a2d;
+}
+
+.badge.personal {
+  background: #f0edff;
+  color: var(--accent-dark);
+}
+
+.badge-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  max-width: 420px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  color: #36415f;
+  font-weight: 700;
+  z-index: 20;
+}
+
+.empty {
+  border: 1px dashed #d7ddea;
+  border-radius: 10px;
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
