@@ -9,8 +9,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
+from app.forget_commands import is_forget_all_message
 from app.graph import MindlyGraph, make_initial_state
-from app.history import ChatHistoryStore
+from app.history import build_chat_history_store
 from app.llm import OpenRouterClient
 from app.logging_config import configure_logging
 from app.memory.factory import build_fact_extractor, build_memory
@@ -38,12 +39,17 @@ if client_assets_dir.exists():
 # память временно заменена на объект заглушки
 llm_client = OpenRouterClient(settings)
 memory = build_memory(settings)
-chat_history = ChatHistoryStore(max_messages=settings.history_window * 4)
+chat_history = build_chat_history_store(
+    backend=settings.chat_history_backend,
+    database_url=settings.database_url,
+    max_messages=settings.chat_history_max_messages,
+)
 mindly_graph = MindlyGraph(
     memory=memory,
     llm=llm_client,
     fact_extractor=build_fact_extractor(settings, llm_client),
     history_window=settings.history_window,
+    on_forget_all=chat_history.clear,
 )
 
 
@@ -70,6 +76,7 @@ class AppConfigResponse(BaseModel):
 
 class MemoryListResponse(BaseModel):
     facts: list[MemoryFact]
+    forbidden_topics: list[str] = Field(default_factory=list)
 
 
 @app.get("/")
@@ -120,6 +127,9 @@ async def _stream_chat_and_save_history(
 
     assistant_message = "".join(chunks).strip()
     if assistant_message:
+        if is_forget_all_message(user_message):
+            logger.info("chat.history.skip_append_after_forget_all user_id=%s", user_id)
+            return
         chat_history.append_exchange(user_id, user_message, assistant_message)
         logger.info("chat.history.append user_id=%s messages=%s", user_id, len(chat_history.list(user_id)))
 
@@ -155,12 +165,25 @@ async def forget_memory(user_id: str, query: str) -> ForgetResult:
 @app.get("/memory")
 async def list_memory(user_id: str) -> MemoryListResponse:
     facts = memory.list_facts(user_id)
-    logger.info("memory.list user_id=%s count=%s", user_id, len(facts))
-    return MemoryListResponse(facts=facts)
+    forbidden_topics = memory.list_forbidden_topics(user_id)
+    logger.info(
+        "memory.list user_id=%s count=%s forbidden_topics=%s",
+        user_id,
+        len(facts),
+        len(forbidden_topics),
+    )
+    return MemoryListResponse(facts=facts, forbidden_topics=forbidden_topics)
 
 
 @app.delete("/memory/all")
 async def forget_all_memory(user_id: str) -> ForgetResult:
-    deleted = memory.forget_all(user_id)
-    logger.info("memory.forget_all user_id=%s deleted=%s", user_id, deleted)
+    memory_deleted = memory.forget_all(user_id)
+    history_deleted = chat_history.clear(user_id)
+    deleted = memory_deleted + history_deleted
+    logger.info(
+        "forget_all user_id=%s memory_deleted=%s history_deleted=%s",
+        user_id,
+        memory_deleted,
+        history_deleted,
+    )
     return ForgetResult(deleted=deleted)

@@ -34,6 +34,16 @@ uvicorn app.main:app --reload
 
 Open `http://127.0.0.1:8000`.
 
+To run the app and PostgreSQL in Docker:
+
+```bash
+docker compose up --build
+```
+
+The app is available at `http://127.0.0.1:8000`. In compose, chat history uses
+PostgreSQL automatically through the internal service URL
+`postgresql://mindly:mindly@postgres:5432/mindly`.
+
 For frontend development, run FastAPI on `8000` and Vite separately:
 
 ```bash
@@ -78,6 +88,24 @@ Short-term chat history is separate from long-term memory:
 - `DELETE /chat/history?user_id=...` clears only the current dialog.
 - `POST /chat/new?user_id=...` starts a new chat by clearing only dialog history.
 - `DELETE /memory/all?user_id=...` clears only long-term facts.
+
+By default chat history is kept in memory for fast local tests. To persist it in
+PostgreSQL, start the database and switch the history backend:
+
+```bash
+docker compose up -d postgres
+```
+
+```text
+CHAT_HISTORY_BACKEND=postgres
+CHAT_HISTORY_MAX_MESSAGES=0
+DATABASE_URL=postgresql://mindly:mindly@127.0.0.1:5432/mindly
+```
+
+The initial table is defined in `db/init.sql`. The app also runs
+`CREATE TABLE IF NOT EXISTS` on startup when the PostgreSQL backend is enabled.
+Set `CHAT_HISTORY_MAX_MESSAGES` to a positive number if you want to keep only
+the latest N messages per user.
 
 ## Tests
 
