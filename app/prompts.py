@@ -24,14 +24,23 @@ def build_prompt(
     *,
     persona: str,
     memories: list[str],
+    forbidden_topics: list[str] | None = None,
     history: list[ChatMessage],
     message: str,
 ) -> list[ChatMessage]:
     memory_block = "\n".join(f"- {item}" for item in memories) if memories else "- No stored facts yet."
+    forbidden_block = (
+        "\n".join(f"- {item}" for item in forbidden_topics)
+        if forbidden_topics
+        else "- No forbidden topics."
+    )
     system_prompt = (
         f"{get_persona_prompt(persona)}\n\n"
         "Relevant long-term memory for this user:\n"
         f"{memory_block}\n\n"
+        "Topics the user asked not to bring up:\n"
+        f"{forbidden_block}\n\n"
+        "Do not proactively mention, ask about, or steer the conversation toward forbidden topics. "
         "Use memory only when it is relevant. Never reveal memory from other users."
     )
     return [

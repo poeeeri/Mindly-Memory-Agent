@@ -12,6 +12,7 @@ from app.memory.models import MemoryFact
 class FactMemory:
     def __init__(self) -> None:
         self._facts: dict[str, list[MemoryFact]] = defaultdict(list)
+        self._forbidden_topics: dict[str, list[str]] = defaultdict(list)
 
     def search(self, user_id: str, query: str) -> list[str]:
         facts = self._facts.get(user_id, [])
@@ -51,6 +52,18 @@ class FactMemory:
             )
         )
 
+    def add_forbidden_topic(self, user_id: str, topic: str) -> bool:
+        normalized = normalize_sentence(topic)
+        if not normalized:
+            return False
+        if normalized in self._forbidden_topics[user_id]:
+            return False
+        self._forbidden_topics[user_id].append(normalized)
+        return True
+
+    def list_forbidden_topics(self, user_id: str) -> list[str]:
+        return list(self._forbidden_topics.get(user_id, []))
+
     def forget(self, user_id: str, query: str) -> int:
         query_terms = terms(query)
         before = len(self._facts.get(user_id, []))
@@ -63,8 +76,9 @@ class FactMemory:
         return before - len(self._facts[user_id])
 
     def forget_all(self, user_id: str) -> int:
-        count = len(self._facts.get(user_id, []))
+        count = len(self._facts.get(user_id, [])) + len(self._forbidden_topics.get(user_id, []))
         self._facts[user_id].clear()
+        self._forbidden_topics[user_id].clear()
         return count
 
     def list_facts(self, user_id: str) -> list[MemoryFact]:

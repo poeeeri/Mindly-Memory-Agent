@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
-from app.graph import MindlyGraph, is_forget_all_message, make_initial_state
+from app.forget_commands import is_forget_all_message
+from app.graph import MindlyGraph, make_initial_state
 from app.history import build_chat_history_store
 from app.llm import OpenRouterClient
 from app.logging_config import configure_logging
@@ -75,6 +76,7 @@ class AppConfigResponse(BaseModel):
 
 class MemoryListResponse(BaseModel):
     facts: list[MemoryFact]
+    forbidden_topics: list[str] = Field(default_factory=list)
 
 
 @app.get("/")
@@ -163,8 +165,14 @@ async def forget_memory(user_id: str, query: str) -> ForgetResult:
 @app.get("/memory")
 async def list_memory(user_id: str) -> MemoryListResponse:
     facts = memory.list_facts(user_id)
-    logger.info("memory.list user_id=%s count=%s", user_id, len(facts))
-    return MemoryListResponse(facts=facts)
+    forbidden_topics = memory.list_forbidden_topics(user_id)
+    logger.info(
+        "memory.list user_id=%s count=%s forbidden_topics=%s",
+        user_id,
+        len(facts),
+        len(forbidden_topics),
+    )
+    return MemoryListResponse(facts=facts, forbidden_topics=forbidden_topics)
 
 
 @app.delete("/memory/all")

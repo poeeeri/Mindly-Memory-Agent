@@ -5,6 +5,12 @@ import time
 
 from langgraph.graph import END, StateGraph
 
+from app.forbidden_topics import (
+    build_forbidden_topic_response,
+    extract_forbidden_topic,
+    filter_forbidden_memories,
+)
+from app.forget_commands import try_handle_forget_all, try_handle_forget_query
 from app.llm import OpenRouterClient, OpenRouterError
 from app.memory.base import MemoryStore
 from app.memory.extractor import FactExtractionError, FactExtractor
@@ -12,16 +18,6 @@ from app.prompts import build_prompt
 from app.state import AgentState, ChatMessage
 
 logger = logging.getLogger(__name__)
-
-FORGET_ALL_MESSAGES = {
-    "/forget_all",
-    "удали все мои данные",
-    "забудь все обо мне",
-}
-
-
-def is_forget_all_message(message: str) -> bool:
-    return message.strip().lower() in FORGET_ALL_MESSAGES
 
 
 class MindlyGraph:
@@ -72,31 +68,52 @@ class MindlyGraph:
 
     def check_forget_command(self, state: AgentState) -> AgentState:
         message = state["message"].strip()
-        lowered = message.lower()
-        if lowered in FORGET_ALL_MESSAGES:
-            memory_deleted = self.memory.forget_all(state["user_id"])
-            history_deleted = self.on_forget_all(state["user_id"]) if self.on_forget_all else 0
-            deleted = memory_deleted + history_deleted
-            return {**state, "forget_command": "all", "response": f"Готово, удалено записей: {deleted}."}
+        user_id = state["user_id"]
+
+        forget_all_result = try_handle_forget_all(
+            user_id=user_id,
+            message=message,
+            memory=self.memory,
+            on_forget_all=self.on_forget_all,
+        )
+        if forget_all_result:
+            return {**state, **forget_all_result}
+
+        forbidden_topic = extract_forbidden_topic(message)
+        if forbidden_topic:
+            created = self.memory.add_forbidden_topic(user_id, forbidden_topic)
+            return {
+                **state,
+                "forget_command": "forbidden_topic",
+                "response": build_forbidden_topic_response(forbidden_topic, created=created),
+            }
 
         match = re.match(r"^(/forget|забудь,?|забудь что)\s+(?P<query>.+)$", message, flags=re.IGNORECASE)
         if match:
             query = match.group("query").strip()
-            deleted = self.memory.forget(state["user_id"], query)
-            return {**state, "forget_command": query, "response": f"Готово, удалено записей: {deleted}."}
+            return {**state, **try_handle_forget_query(user_id=user_id, query=query, memory=self.memory)}
 
         return {**state, "forget_command": None}
 
     def retrieve_memory(self, state: AgentState) -> AgentState:
         memories = self.memory.search(state["user_id"], state["message"])
-        logger.info("memory.search user_id=%s count=%s", state["user_id"], len(memories))
-        return {**state, "memories": memories}
+        forbidden_topics = self.memory.list_forbidden_topics(state["user_id"])
+        filtered_memories = filter_forbidden_memories(memories, forbidden_topics)
+        logger.info(
+            "memory.search user_id=%s count=%s filtered=%s forbidden_topics=%s",
+            state["user_id"],
+            len(memories),
+            len(memories) - len(filtered_memories),
+            len(forbidden_topics),
+        )
+        return {**state, "memories": filtered_memories, "forbidden_topics": forbidden_topics}
 
     def build_prompt(self, state: AgentState) -> AgentState:
         history = state.get("history", [])[-self.history_window :]
         messages = build_prompt(
             persona=state["persona"],
             memories=state.get("memories", []),
+            forbidden_topics=state.get("forbidden_topics", []),
             history=history,
             message=state["message"],
         )
