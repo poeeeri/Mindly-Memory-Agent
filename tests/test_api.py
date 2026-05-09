@@ -18,6 +18,7 @@ def test_memory_debug_endpoint_lists_structured_facts() -> None:
 
 def test_forget_all_endpoint_deletes_user_facts() -> None:
     memory.forget_all("api_user")
+    chat_history.clear("api_user")
     memory.add("api_user", "У меня сын Костик")
     client = TestClient(app)
 

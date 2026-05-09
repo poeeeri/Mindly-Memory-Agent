@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 import logging
 import re
 import time
@@ -13,18 +13,28 @@ from app.state import AgentState, ChatMessage
 
 logger = logging.getLogger(__name__)
 
+FORGET_ALL_MESSAGES = {
+    "/forget_all",
+    "удали все мои данные",
+    "забудь все обо мне",
+}
 
-# память агента спрятана за интерфейсом MemoryStore, чтобы потом заменить на MemPalace
+
+def is_forget_all_message(message: str) -> bool:
+    return message.strip().lower() in FORGET_ALL_MESSAGES
+
+
 class MindlyGraph:
     def __init__(
-        self, *, memory: MemoryStore, llm: OpenRouterClient, 
+        self, *, memory: MemoryStore, llm: OpenRouterClient,
         fact_extractor: FactExtractor | None = None,
         history_window: int = 8,
+        on_forget_all: Callable[[str], int] | None = None,
     ) -> None:
         """
-        создаем два графа: один - полный граф, включая генерацию ответа LLM (graph), другой - граф без генерации (prep_graph 
-        при стриминге, чтобы сначала собрать промпт и найти релевантную память, а потом уже стримить токены напрямую из LLM);
-        компилируем граф и добавляем узлы и ребра
+        Собираем два графа: полный graph для обычного вызова и prep_graph для
+        стриминга, где сначала готовится промпт, а потом токены идут напрямую
+        из LLM
         """
         self.memory = memory
         self.llm = llm
@@ -32,6 +42,7 @@ class MindlyGraph:
             raise ValueError("fact_extractor is required")
         self.fact_extractor = fact_extractor
         self.history_window = history_window
+        self.on_forget_all = on_forget_all
         self.graph = self._compile_graph(include_generation=True)
         self.prep_graph = self._compile_graph(include_generation=False)
 
@@ -43,7 +54,7 @@ class MindlyGraph:
         graph.add_node("save_memory", self.save_memory)
         graph.set_entry_point("check_forget_command")
 
-        # пайплайн работы проверки сообщения на команду
+        # сначала проверяем команды забывания, затем идем в обычный retrieval
         graph.add_conditional_edges(
             "check_forget_command",
             self._route_after_forget_check,
@@ -62,8 +73,10 @@ class MindlyGraph:
     def check_forget_command(self, state: AgentState) -> AgentState:
         message = state["message"].strip()
         lowered = message.lower()
-        if lowered in {"/forget_all", "удали все мои данные", "забудь все обо мне"}:
-            deleted = self.memory.forget_all(state["user_id"])
+        if lowered in FORGET_ALL_MESSAGES:
+            memory_deleted = self.memory.forget_all(state["user_id"])
+            history_deleted = self.on_forget_all(state["user_id"]) if self.on_forget_all else 0
+            deleted = memory_deleted + history_deleted
             return {**state, "forget_command": "all", "response": f"Готово, удалено записей: {deleted}."}
 
         match = re.match(r"^(/forget|забудь,?|забудь что)\s+(?P<query>.+)$", message, flags=re.IGNORECASE)
@@ -94,7 +107,7 @@ class MindlyGraph:
         return {**state, "response": response}
 
     async def save_memory(self, state: AgentState) -> AgentState:
-        # если это forget-команда - ничего не сохраняем
+        # Forget-команды не сохраняем обратно в память
         if state.get("forget_command"):
             return state
 
@@ -142,7 +155,6 @@ class MindlyGraph:
                 yield chunk
         except OpenRouterError as exc:
             logger.exception("llm.openrouter_error user_id=%s status=%s", prepared["user_id"], exc.status_code)
-            # читаемая ошибка для пользователя
             yield (
                 "**OpenRouter вернул ошибку.**\n\n"
                 f"- Статус: `{exc.status_code or 'request error'}`\n"
