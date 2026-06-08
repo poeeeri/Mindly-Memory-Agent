@@ -1,4 +1,5 @@
-import { Trash2, X } from 'lucide-react'
+import { RefreshCw, Trash2, X } from 'lucide-react'
+import memoryEmptyIcon from '../assets/memory_empty_icon.png'
 import { formatTime, factKind } from '../utils/helpers'
 
 function MemoryCard({ fact, isSelected, onToggle, onDelete }) {
@@ -36,6 +37,8 @@ export default function MemoryView({
     facts,
     selectedFacts,
     onToggleFact,
+    onRefreshMemory,
+    refreshingMemory,
     onForgetSelected,
     onForgetAll,
     onForgetSingle
@@ -57,6 +60,14 @@ export default function MemoryView({
                     </p>
                 </div>
                 <div className="memory-header-actions">
+                    <button
+                        className="button primary"
+                        onClick={() => onRefreshMemory()}
+                        disabled={refreshingMemory}
+                    >
+                        <RefreshCw size={17} />
+                        {refreshingMemory ? 'Updating...' : 'Update memory'}
+                    </button>
                     <button
                         className="button danger"
                         onClick={onForgetAll}
@@ -90,7 +101,7 @@ export default function MemoryView({
                 </div>
             ) : (
                 <div className="empty-memory">
-                    <div className="empty-memory-icon">🧠</div>
+                    <img className="empty-memory-icon" src={memoryEmptyIcon} alt="" />
                     <div className="empty-memory-text">
                         <strong>Память пуста</strong>
                         <br />

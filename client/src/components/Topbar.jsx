@@ -1,4 +1,4 @@
-import { PlusCircle } from 'lucide-react'
+import { PlusCircle, RefreshCw } from 'lucide-react'
 
 const PERSONAS = [
     { id: 'wellness_friend', label: 'Wellness friend' },
@@ -11,6 +11,8 @@ export default function Topbar({
     persona,
     onPersonaChange,
     onClearChat,
+    onRefreshMemory,
+    refreshingMemory,
 }) {
     return (
         <div className="topbar">
@@ -44,6 +46,15 @@ export default function Topbar({
             </div>
 
             <div className="actions">
+                <button
+                    className="button"
+                    onClick={() => onRefreshMemory()}
+                    disabled={refreshingMemory}
+                    type="button"
+                >
+                    <RefreshCw size={17} />
+                    {refreshingMemory ? 'Updating...' : 'Update memory'}
+                </button>
                 <button className="button primary" onClick={onClearChat} type="button">
                     <PlusCircle size={17} />
                     Новый чат

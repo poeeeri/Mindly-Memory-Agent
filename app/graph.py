@@ -47,23 +47,21 @@ class MindlyGraph:
         graph.add_node("check_forget_command", self.check_forget_command)
         graph.add_node("retrieve_memory", self.retrieve_memory)
         graph.add_node("build_prompt", self.build_prompt)
-        graph.add_node("save_memory", self.save_memory)
         graph.set_entry_point("check_forget_command")
 
         # сначала проверяем команды забывания, затем идем в обычный retrieval
         graph.add_conditional_edges(
             "check_forget_command",
             self._route_after_forget_check,
-            {"forget": "save_memory", "continue": "retrieve_memory"},
+            {"forget": END, "continue": "retrieve_memory"},
         )
         graph.add_edge("retrieve_memory", "build_prompt")
         if include_generation:
             graph.add_node("generate_response", self.generate_response)
             graph.add_edge("build_prompt", "generate_response")
-            graph.add_edge("generate_response", "save_memory")
+            graph.add_edge("generate_response", END)
         else:
             graph.add_edge("build_prompt", END)
-        graph.add_edge("save_memory", END)
         return graph.compile()
 
     def check_forget_command(self, state: AgentState) -> AgentState:
@@ -181,10 +179,7 @@ class MindlyGraph:
             )
             return
 
-        await self.save_after_stream(prepared, "".join(chunks))
-
-    async def save_after_stream(self, state: AgentState, response: str) -> None:
-        await self.save_memory({**state, "response": response})
+        prepared["response"] = "".join(chunks)
 
 
 def make_initial_state(
