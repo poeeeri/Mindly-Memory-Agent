@@ -64,6 +64,11 @@ class ForgetResult(BaseModel):
     deleted: int
 
 
+class MemoryRefreshResult(BaseModel):
+    added: int
+    processed_messages: int
+
+
 class ChatHistoryResponse(BaseModel):
     history: list[ChatMessage]
 
@@ -173,6 +178,35 @@ async def list_memory(user_id: str) -> MemoryListResponse:
         len(forbidden_topics),
     )
     return MemoryListResponse(facts=facts, forbidden_topics=forbidden_topics)
+
+
+@app.post("/memory/refresh")
+async def refresh_memory(user_id: str) -> MemoryRefreshResult:
+    history = chat_history.window(user_id, settings.memory_refresh_window)
+    user_messages = [item["content"] for item in history if item["role"] == "user"]
+    if not user_messages:
+        logger.info("memory.refresh.skip_empty user_id=%s", user_id)
+        return MemoryRefreshResult(added=0, processed_messages=0)
+
+    before = len(memory.list_facts(user_id))
+    transcript = "\n".join(f"User: {message}" for message in user_messages)
+    await mindly_graph.save_memory(
+        make_initial_state(
+            user_id=user_id,
+            persona="wellness_friend",
+            message=transcript,
+            history=[],
+        )
+    )
+    after = len(memory.list_facts(user_id))
+    added = max(after - before, 0)
+    logger.info(
+        "memory.refresh user_id=%s processed_messages=%s added=%s",
+        user_id,
+        len(user_messages),
+        added,
+    )
+    return MemoryRefreshResult(added=added, processed_messages=len(user_messages))
 
 
 @app.delete("/memory/all")

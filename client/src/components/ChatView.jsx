@@ -34,10 +34,17 @@ function ChatMessage({ item, streaming }) {
 
 export default function ChatView({ history, message, onMessageChange, onSend, streaming }) {
     const bottomRef = useRef(null)
+    const textareaRef = useRef(null)
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ block: 'end' })
     }, [history, streaming])
+
+    useEffect(() => {
+        if (!streaming) {
+            textareaRef.current?.focus()
+        }
+    }, [streaming])
 
     return (
         <div className="chat-layout chat-layout-single">
@@ -61,6 +68,7 @@ export default function ChatView({ history, message, onMessageChange, onSend, st
 
                 <form className="composer" onSubmit={onSend}>
                     <textarea
+                        ref={textareaRef}
                         disabled={streaming}
                         value={message}
                         onChange={(e) => onMessageChange(e.target.value)}

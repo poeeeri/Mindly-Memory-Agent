@@ -8,7 +8,8 @@ import {
   streamChat,
   clearChatHistory,
   forgetAllMemory,
-  forgetMemoryFact
+  forgetMemoryFact,
+  refreshMemory
 } from './api'
 
 import LoginForm from './components/LoginForm'
@@ -17,6 +18,8 @@ import Topbar from './components/Topbar'
 import ChatView from './components/ChatView'
 import MemoryView from './components/MemoryView'
 import EvaluationView from './components/EvaluationView'
+
+const IDLE_MEMORY_REFRESH_MS = 5 * 60 * 1000
 
 function App() {
   const [loggedInUser, setLoggedInUser] = useState(() => {
@@ -35,9 +38,11 @@ function App() {
   const [facts, setFacts] = useState([])
   const [selectedFacts, setSelectedFacts] = useState(new Set())
   const [streaming, setStreaming] = useState(false)
+  const [refreshingMemory, setRefreshingMemory] = useState(false)
   const [toast, setToast] = useState('')
   const [config, setConfig] = useState({ model: 'loading', memoryBackend: '', factExtractor: '' })
   const toastTimerRef = useRef(null)
+  const lastAutoRefreshKeyRef = useRef('')
 
   const history = useMemo(() => histories.get(loggedInUser) || [], [histories, loggedInUser])
 
@@ -84,13 +89,45 @@ function App() {
     }
   }, [])
 
+  const handleRefreshMemory = useCallback(async ({ silent = false } = {}) => {
+    if (!loggedInUser || refreshingMemory) return
+    setRefreshingMemory(true)
+    try {
+      const result = await refreshMemory(loggedInUser)
+      await loadMemory(loggedInUser)
+      lastAutoRefreshKeyRef.current = `${loggedInUser}:${history.length}`
+      if (!silent) {
+        showToast(`Memory updated. Added facts: ${result.added}.`)
+      }
+    } catch (error) {
+      if (!silent) {
+        showToast(`Memory refresh failed: ${error.message}`)
+      }
+    } finally {
+      setRefreshingMemory(false)
+    }
+  }, [loggedInUser, refreshingMemory, loadMemory, history.length, showToast])
+
   useEffect(() => {
     if (!loggedInUser) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConfig()
     loadHistory(loggedInUser)
     loadMemory(loggedInUser)
     setSelectedFacts(new Set())
   }, [loggedInUser, loadConfig, loadHistory, loadMemory])
+
+  useEffect(() => {
+    if (!loggedInUser || streaming || history.length === 0) return
+    const refreshKey = `${loggedInUser}:${history.length}`
+    if (lastAutoRefreshKeyRef.current === refreshKey) return
+
+    const timerId = setTimeout(() => {
+      handleRefreshMemory({ silent: true })
+    }, IDLE_MEMORY_REFRESH_MS)
+
+    return () => clearTimeout(timerId)
+  }, [loggedInUser, streaming, history.length, handleRefreshMemory])
 
   const handleNewChat = useCallback(async () => {
     if (!loggedInUser) return
@@ -187,6 +224,7 @@ function App() {
     setSelectedFacts(new Set())
     setMessage('')
     setStreaming(false)
+    setRefreshingMemory(false)
     setToast('')
     setView('chat')
   }, [])
@@ -209,6 +247,8 @@ function App() {
             facts={facts}
             selectedFacts={selectedFacts}
             onToggleFact={handleToggleFact}
+            onRefreshMemory={handleRefreshMemory}
+            refreshingMemory={refreshingMemory}
             onForgetSelected={handleForgetSelected}
             onForgetAll={handleForgetAll}
             onForgetSingle={handleForgetSingle}
@@ -243,6 +283,8 @@ function App() {
           persona={persona}
           onPersonaChange={handlePersonaChange}
           onClearChat={handleNewChat}
+          onRefreshMemory={handleRefreshMemory}
+          refreshingMemory={refreshingMemory}
         />
         {renderView()}
       </main>

@@ -1,6 +1,7 @@
 import { MessageCircle, Database, BarChart3, LogOut } from 'lucide-react'
+import appIcon from '../assets/app_icon.png'
 
-export default function Sidebar({ view, onViewChange, config, onLogout }) {
+export default function Sidebar({ view, onViewChange, onLogout }) {
     const items = [
         { key: 'chat', icon: MessageCircle, label: 'Чат' },
         { key: 'memory', icon: Database, label: 'Память' },
@@ -10,7 +11,7 @@ export default function Sidebar({ view, onViewChange, config, onLogout }) {
     return (
         <aside className="sidebar">
             <div className="brand">
-                <div className="brand-mark">M</div>
+                <img className="brand-mark" src={appIcon} alt="Mindly" />
                 <div>
                     <div className="brand-title">Mindly</div>
                     <div className="brand-subtitle">memory agent</div>
@@ -31,11 +32,7 @@ export default function Sidebar({ view, onViewChange, config, onLogout }) {
                 ))}
             </nav>
 
-            <div className="sidebar-footer">
-                <strong>{config.memoryBackend || 'memory'}</strong>
-                <br />
-                extractor: {config.factExtractor || 'llm'}
-            </div>
+            <div className="sidebar-footer"></div>
 
             <button className="logout-button" onClick={onLogout} type="button">
                 <LogOut size={18} />

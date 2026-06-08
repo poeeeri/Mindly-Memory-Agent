@@ -37,6 +37,12 @@ export function forgetMemoryFact(userId, query) {
   )
 }
 
+export function refreshMemory(userId) {
+  return fetchJson(`/memory/refresh?user_id=${encodeURIComponent(userId)}`, {
+    method: 'POST',
+  })
+}
+
 export async function streamChat({ userId, persona, message, onChunk }) {
   const response = await fetch('/chat', {
     method: 'POST',

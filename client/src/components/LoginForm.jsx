@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import appIcon from '../assets/app_icon.png'
 
 export default function LoginForm({ onLogin }) {
     const [name, setName] = useState('')
@@ -13,7 +14,7 @@ export default function LoginForm({ onLogin }) {
         <div className="login-container">
             <div className="login-card">
                 <div className="brand">
-                    <div className="brand-mark">M</div>
+                    <img className="brand-mark" src={appIcon} alt="Mindly" />
                     <div>
                         <div className="brand-title">Mindly</div>
                         <div className="brand-subtitle">memory agent</div>
