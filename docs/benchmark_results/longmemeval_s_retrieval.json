@@ -1,0 +1,223 @@
+{
+  "summary": {
+    "no_memory": {
+      "examples": 500,
+      "hit_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "mrr_at_k": 0.0,
+      "avg_latency_ms": 0.0
+    },
+    "recency": {
+      "examples": 500,
+      "hit_at_k": 0.236,
+      "recall_at_k": 0.1358,
+      "mrr_at_k": 0.10466666666666667,
+      "avg_latency_ms": 0.0
+    },
+    "memory_session": {
+      "examples": 500,
+      "hit_at_k": 0.594,
+      "recall_at_k": 0.46326666666666666,
+      "mrr_at_k": 0.4194333333333333,
+      "avg_latency_ms": 615.2759071993642
+    },
+    "memory_message": {
+      "examples": 500,
+      "hit_at_k": 0.782,
+      "recall_at_k": 0.6465666666666666,
+      "mrr_at_k": 0.6306,
+      "avg_latency_ms": 641.9294729996473
+    }
+  },
+  "by_question_type": {
+    "memory_message": {
+      "knowledge-update": {
+        "examples": 78,
+        "hit_at_k": 0.9615384615384616,
+        "recall_at_k": 0.8653846153846154,
+        "mrr_at_k": 0.8760683760683761,
+        "avg_latency_ms": 675.5456961586905
+      },
+      "multi-session": {
+        "examples": 133,
+        "hit_at_k": 0.7819548872180451,
+        "recall_at_k": 0.506265664160401,
+        "mrr_at_k": 0.5885964912280702,
+        "avg_latency_ms": 657.8252248096637
+      },
+      "single-session-assistant": {
+        "examples": 56,
+        "hit_at_k": 0.9107142857142857,
+        "recall_at_k": 0.9107142857142857,
+        "mrr_at_k": 0.8181547619047619,
+        "avg_latency_ms": 724.4880821360441
+      },
+      "single-session-preference": {
+        "examples": 30,
+        "hit_at_k": 0.4666666666666667,
+        "recall_at_k": 0.4666666666666667,
+        "mrr_at_k": 0.24944444444444444,
+        "avg_latency_ms": 546.9227866657699
+      },
+      "single-session-user": {
+        "examples": 70,
+        "hit_at_k": 0.7714285714285715,
+        "recall_at_k": 0.7714285714285715,
+        "mrr_at_k": 0.6714285714285714,
+        "avg_latency_ms": 726.7305642832071
+      },
+      "temporal-reasoning": {
+        "examples": 133,
+        "hit_at_k": 0.6992481203007519,
+        "recall_at_k": 0.5221804511278195,
+        "mrr_at_k": 0.5141604010025063,
+        "avg_latency_ms": 548.3553503785297
+      }
+    },
+    "memory_session": {
+      "knowledge-update": {
+        "examples": 78,
+        "hit_at_k": 0.7307692307692307,
+        "recall_at_k": 0.5833333333333334,
+        "mrr_at_k": 0.5288461538461539,
+        "avg_latency_ms": 657.8852948687899
+      },
+      "multi-session": {
+        "examples": 133,
+        "hit_at_k": 0.5714285714285714,
+        "recall_at_k": 0.34912280701754383,
+        "mrr_at_k": 0.3730576441102757,
+        "avg_latency_ms": 626.7531007489791
+      },
+      "single-session-assistant": {
+        "examples": 56,
+        "hit_at_k": 0.7857142857142857,
+        "recall_at_k": 0.7857142857142857,
+        "mrr_at_k": 0.7455357142857143,
+        "avg_latency_ms": 693.7886000003865
+      },
+      "single-session-preference": {
+        "examples": 30,
+        "hit_at_k": 0.23333333333333334,
+        "recall_at_k": 0.23333333333333334,
+        "mrr_at_k": 0.10944444444444444,
+        "avg_latency_ms": 523.928703336666
+      },
+      "single-session-user": {
+        "examples": 70,
+        "hit_at_k": 0.5714285714285714,
+        "recall_at_k": 0.5714285714285714,
+        "mrr_at_k": 0.36857142857142855,
+        "avg_latency_ms": 678.6787571418764
+      },
+      "temporal-reasoning": {
+        "examples": 133,
+        "hit_at_k": 0.5488721804511278,
+        "recall_at_k": 0.3661654135338346,
+        "mrr_at_k": 0.36102756892230575,
+        "avg_latency_ms": 532.9864849642802
+      }
+    },
+    "no_memory": {
+      "knowledge-update": {
+        "examples": 78,
+        "hit_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "mrr_at_k": 0.0,
+        "avg_latency_ms": 0.0
+      },
+      "multi-session": {
+        "examples": 133,
+        "hit_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "mrr_at_k": 0.0,
+        "avg_latency_ms": 0.0
+      },
+      "single-session-assistant": {
+        "examples": 56,
+        "hit_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "mrr_at_k": 0.0,
+        "avg_latency_ms": 0.0
+      },
+      "single-session-preference": {
+        "examples": 30,
+        "hit_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "mrr_at_k": 0.0,
+        "avg_latency_ms": 0.0
+      },
+      "single-session-user": {
+        "examples": 70,
+        "hit_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "mrr_at_k": 0.0,
+        "avg_latency_ms": 0.0
+      },
+      "temporal-reasoning": {
+        "examples": 133,
+        "hit_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "mrr_at_k": 0.0,
+        "avg_latency_ms": 0.0
+      }
+    },
+    "recency": {
+      "knowledge-update": {
+        "examples": 78,
+        "hit_at_k": 0.41025641025641024,
+        "recall_at_k": 0.21153846153846154,
+        "mrr_at_k": 0.20064102564102565,
+        "avg_latency_ms": 0.0
+      },
+      "multi-session": {
+        "examples": 133,
+        "hit_at_k": 0.3007518796992481,
+        "recall_at_k": 0.12606516290726816,
+        "mrr_at_k": 0.10927318295739348,
+        "avg_latency_ms": 0.0
+      },
+      "single-session-assistant": {
+        "examples": 56,
+        "hit_at_k": 0.14285714285714285,
+        "recall_at_k": 0.14285714285714285,
+        "mrr_at_k": 0.05416666666666667,
+        "avg_latency_ms": 0.0
+      },
+      "single-session-preference": {
+        "examples": 30,
+        "hit_at_k": 0.13333333333333333,
+        "recall_at_k": 0.13333333333333333,
+        "mrr_at_k": 0.10666666666666667,
+        "avg_latency_ms": 0.0
+      },
+      "single-session-user": {
+        "examples": 70,
+        "hit_at_k": 0.12857142857142856,
+        "recall_at_k": 0.12857142857142856,
+        "mrr_at_k": 0.07476190476190477,
+        "avg_latency_ms": 0.0
+      },
+      "temporal-reasoning": {
+        "examples": 133,
+        "hit_at_k": 0.18796992481203006,
+        "recall_at_k": 0.1025062656641604,
+        "mrr_at_k": 0.08032581453634086,
+        "avg_latency_ms": 0.0
+      }
+    }
+  },
+  "metadata": {
+    "dataset_path": "data\\benchmarks\\longmemeval_s_cleaned.json",
+    "split": "s",
+    "examples": 500,
+    "top_k": 5,
+    "embedding": "app.memory.embeddings.embed_text hashing encoder",
+    "memory_refresh_mode_default": "manual",
+    "strategy_notes": {
+      "memory_session": "Indexes each LongMemEval session as one memory chunk.",
+      "memory_message": "Indexes each message as a separate memory chunk and returns unique sessions."
+    },
+    "elapsed_seconds": 631.86
+  }
+}

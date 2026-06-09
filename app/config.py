@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     openrouter_app_title: str = "Mindly Memory Agent"
     use_fake_llm: bool = False
     history_window: int = 8
+    memory_refresh_mode: str = "manual"
     memory_refresh_window: int = 20
     chat_history_backend: str = "memory"
     chat_history_max_messages: int = 0

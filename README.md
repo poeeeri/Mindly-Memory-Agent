@@ -59,6 +59,16 @@ For a local smoke test without OpenRouter, set:
 USE_FAKE_LLM=true
 ```
 
+By default, long-term memory extraction is explicit and cheap:
+
+```text
+MEMORY_REFRESH_MODE=manual
+```
+
+Use `POST /memory/refresh` or the UI `Update memory` button to persist new
+facts. For experiments you can set `MEMORY_REFRESH_MODE=every_message`, but it
+adds an extra fact-extraction step after every chat response.
+
 The default OpenRouter model is `google/gemini-2.5-flash`: it is paid, but relatively inexpensive and fast. You can switch it in `.env` through `OPENROUTER_MODEL`.
 
 ## Demo flow
@@ -106,6 +116,42 @@ The initial table is defined in `db/init.sql`. The app also runs
 `CREATE TABLE IF NOT EXISTS` on startup when the PostgreSQL backend is enabled.
 Set `CHAT_HISTORY_MAX_MESSAGES` to a positive number if you want to keep only
 the latest N messages per user.
+
+## Long-term memory benchmark
+
+The repository includes a LongMemEval-S retrieval benchmark runner for the
+long-term memory layer. It downloads the public cleaned LongMemEval-S split,
+indexes each candidate session with the same local hashing encoder used by the
+MemPalace/Chroma backend, and compares:
+
+- `no_memory`: no long-term memory context.
+- `recency`: the latest `top_k` sessions.
+- `memory_session`: vector retrieval where each session is indexed as one
+  memory chunk.
+- `memory_message`: vector retrieval where each message is indexed as a
+  separate memory chunk and mapped back to its session. This approximates more
+  frequent memory updates.
+
+Download and run:
+
+```bash
+python benchmarks/longmemeval_retrieval.py --download --top-k 5
+```
+
+The dataset is stored under `data/benchmarks/`, which is ignored by git. The
+latest checked-in result is in
+`docs/benchmark_results/longmemeval_s_retrieval.json`.
+
+Current LongMemEval-S result (`500` examples, `top_k=5`):
+
+| Strategy | Hit@5 | Recall@5 | MRR@5 | Avg retrieval latency |
+| --- | ---: | ---: | ---: | ---: |
+| no_memory | 0.00% | 0.00% | 0.0000 | 0.00 ms |
+| recency | 23.60% | 13.58% | 0.1047 | 0.00 ms |
+| memory_session | 59.40% | 46.33% | 0.4194 | 615.28 ms |
+| memory_message | 78.20% | 64.66% | 0.6306 | 641.93 ms |
+
+This benchmark measures retrieval quality, not LLM answer generation quality.
 
 ## Tests
 

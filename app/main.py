@@ -137,6 +137,16 @@ async def _stream_chat_and_save_history(
             return
         chat_history.append_exchange(user_id, user_message, assistant_message)
         logger.info("chat.history.append user_id=%s messages=%s", user_id, len(chat_history.list(user_id)))
+        if settings.memory_refresh_mode.strip().lower() == "every_message":
+            await mindly_graph.save_memory(
+                make_initial_state(
+                    user_id=user_id,
+                    persona=state.get("persona", "wellness_friend"),
+                    message=user_message,
+                    history=[],
+                )
+            )
+            logger.info("memory.refresh.every_message user_id=%s", user_id)
 
 
 @app.get("/chat/history")
