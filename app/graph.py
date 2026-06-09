@@ -1,10 +1,16 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 import logging
 import re
 import time
 
 from langgraph.graph import END, StateGraph
 
+from app.forbidden_topics import (
+    build_forbidden_topic_response,
+    extract_forbidden_topic,
+    filter_forbidden_memories,
+)
+from app.forget_commands import try_handle_forget_all, try_handle_forget_query
 from app.llm import OpenRouterClient, OpenRouterError
 from app.memory.base import MemoryStore
 from app.memory.extractor import FactExtractionError, FactExtractor
@@ -14,17 +20,17 @@ from app.state import AgentState, ChatMessage
 logger = logging.getLogger(__name__)
 
 
-# память агента спрятана за интерфейсом MemoryStore, чтобы потом заменить на MemPalace
 class MindlyGraph:
     def __init__(
-        self, *, memory: MemoryStore, llm: OpenRouterClient, 
+        self, *, memory: MemoryStore, llm: OpenRouterClient,
         fact_extractor: FactExtractor | None = None,
         history_window: int = 8,
+        on_forget_all: Callable[[str], int] | None = None,
     ) -> None:
         """
-        создаем два графа: один - полный граф, включая генерацию ответа LLM (graph), другой - граф без генерации (prep_graph 
-        при стриминге, чтобы сначала собрать промпт и найти релевантную память, а потом уже стримить токены напрямую из LLM);
-        компилируем граф и добавляем узлы и ребра
+        Собираем два графа: полный graph для обычного вызова и prep_graph для
+        стриминга, где сначала готовится промпт, а потом токены идут напрямую
+        из LLM
         """
         self.memory = memory
         self.llm = llm
@@ -32,6 +38,7 @@ class MindlyGraph:
             raise ValueError("fact_extractor is required")
         self.fact_extractor = fact_extractor
         self.history_window = history_window
+        self.on_forget_all = on_forget_all
         self.graph = self._compile_graph(include_generation=True)
         self.prep_graph = self._compile_graph(include_generation=False)
 
@@ -40,50 +47,71 @@ class MindlyGraph:
         graph.add_node("check_forget_command", self.check_forget_command)
         graph.add_node("retrieve_memory", self.retrieve_memory)
         graph.add_node("build_prompt", self.build_prompt)
-        graph.add_node("save_memory", self.save_memory)
         graph.set_entry_point("check_forget_command")
 
-        # пайплайн работы проверки сообщения на команду
+        # сначала проверяем команды забывания, затем идем в обычный retrieval
         graph.add_conditional_edges(
             "check_forget_command",
             self._route_after_forget_check,
-            {"forget": "save_memory", "continue": "retrieve_memory"},
+            {"forget": END, "continue": "retrieve_memory"},
         )
         graph.add_edge("retrieve_memory", "build_prompt")
         if include_generation:
             graph.add_node("generate_response", self.generate_response)
             graph.add_edge("build_prompt", "generate_response")
-            graph.add_edge("generate_response", "save_memory")
+            graph.add_edge("generate_response", END)
         else:
             graph.add_edge("build_prompt", END)
-        graph.add_edge("save_memory", END)
         return graph.compile()
 
     def check_forget_command(self, state: AgentState) -> AgentState:
         message = state["message"].strip()
-        lowered = message.lower()
-        if lowered in {"/forget_all", "удали все мои данные", "забудь все обо мне"}:
-            deleted = self.memory.forget_all(state["user_id"])
-            return {**state, "forget_command": "all", "response": f"Готово, удалено записей: {deleted}."}
+        user_id = state["user_id"]
+
+        forget_all_result = try_handle_forget_all(
+            user_id=user_id,
+            message=message,
+            memory=self.memory,
+            on_forget_all=self.on_forget_all,
+        )
+        if forget_all_result:
+            return {**state, **forget_all_result}
+
+        forbidden_topic = extract_forbidden_topic(message)
+        if forbidden_topic:
+            created = self.memory.add_forbidden_topic(user_id, forbidden_topic)
+            return {
+                **state,
+                "forget_command": "forbidden_topic",
+                "response": build_forbidden_topic_response(forbidden_topic, created=created),
+            }
 
         match = re.match(r"^(/forget|забудь,?|забудь что)\s+(?P<query>.+)$", message, flags=re.IGNORECASE)
         if match:
             query = match.group("query").strip()
-            deleted = self.memory.forget(state["user_id"], query)
-            return {**state, "forget_command": query, "response": f"Готово, удалено записей: {deleted}."}
+            return {**state, **try_handle_forget_query(user_id=user_id, query=query, memory=self.memory)}
 
         return {**state, "forget_command": None}
 
     def retrieve_memory(self, state: AgentState) -> AgentState:
         memories = self.memory.search(state["user_id"], state["message"])
-        logger.info("memory.search user_id=%s count=%s", state["user_id"], len(memories))
-        return {**state, "memories": memories}
+        forbidden_topics = self.memory.list_forbidden_topics(state["user_id"])
+        filtered_memories = filter_forbidden_memories(memories, forbidden_topics)
+        logger.info(
+            "memory.search user_id=%s count=%s filtered=%s forbidden_topics=%s",
+            state["user_id"],
+            len(memories),
+            len(memories) - len(filtered_memories),
+            len(forbidden_topics),
+        )
+        return {**state, "memories": filtered_memories, "forbidden_topics": forbidden_topics}
 
     def build_prompt(self, state: AgentState) -> AgentState:
         history = state.get("history", [])[-self.history_window :]
         messages = build_prompt(
             persona=state["persona"],
             memories=state.get("memories", []),
+            forbidden_topics=state.get("forbidden_topics", []),
             history=history,
             message=state["message"],
         )
@@ -94,7 +122,7 @@ class MindlyGraph:
         return {**state, "response": response}
 
     async def save_memory(self, state: AgentState) -> AgentState:
-        # если это forget-команда - ничего не сохраняем
+        # Forget-команды не сохраняем обратно в память
         if state.get("forget_command"):
             return state
 
@@ -142,7 +170,6 @@ class MindlyGraph:
                 yield chunk
         except OpenRouterError as exc:
             logger.exception("llm.openrouter_error user_id=%s status=%s", prepared["user_id"], exc.status_code)
-            # читаемая ошибка для пользователя
             yield (
                 "**OpenRouter вернул ошибку.**\n\n"
                 f"- Статус: `{exc.status_code or 'request error'}`\n"
@@ -152,10 +179,7 @@ class MindlyGraph:
             )
             return
 
-        await self.save_after_stream(prepared, "".join(chunks))
-
-    async def save_after_stream(self, state: AgentState, response: str) -> None:
-        await self.save_memory({**state, "response": response})
+        prepared["response"] = "".join(chunks)
 
 
 def make_initial_state(

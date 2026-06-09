@@ -14,6 +14,7 @@ class AgentState(TypedDict, total=False):
     history: list[ChatMessage]
     forget_command: str | None
     memories: list[str]
+    forbidden_topics: list[str]
     prompt_messages: list[ChatMessage]
     response: str
     ttft_ms: float | None

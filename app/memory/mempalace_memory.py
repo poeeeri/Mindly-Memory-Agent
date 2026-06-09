@@ -6,6 +6,9 @@ from app.memory.embeddings import embed_text
 from app.memory.extractor import normalize_sentence, terms
 from app.memory.models import MemoryFact
 
+FACTS_ROOM = "facts"
+FORBIDDEN_TOPICS_ROOM = "forbidden_topics"
+
 
 class MemPalaceMemory:
     """MemPalace/Chroma-backed implementation of the MemoryStore contract."""
@@ -56,11 +59,46 @@ class MemPalaceMemory:
                     "source": source,
                     "created_at": now,
                     "wing": user_id,
-                    "room": "facts",
+                    "room": FACTS_ROOM,
                 }
             ],
             embeddings=[embed_text(fact_text)],
         )
+
+    def add_forbidden_topic(self, user_id: str, topic: str) -> bool:
+        topic = normalize_sentence(topic)
+        if not topic:
+            return False
+        if topic in self.list_forbidden_topics(user_id):
+            return False
+
+        now = datetime.now(timezone.utc).isoformat()
+        self._collection.upsert(
+            documents=[topic],
+            ids=[str(uuid4())],
+            metadatas=[
+                {
+                    "user_id": user_id,
+                    "source": "forbidden_topic",
+                    "created_at": now,
+                    "wing": user_id,
+                    "room": FORBIDDEN_TOPICS_ROOM,
+                }
+            ],
+            embeddings=[embed_text(topic)],
+        )
+        return True
+
+    def list_forbidden_topics(self, user_id: str) -> list[str]:
+        result = self._collection.get(
+            where={"user_id": user_id},
+            include=["documents", "metadatas"],
+        )
+        return [
+            document
+            for document, metadata in zip(result.documents, result.metadatas)
+            if document and metadata.get("room") == FORBIDDEN_TOPICS_ROOM
+        ]
 
     def forget(self, user_id: str, query: str) -> int:
         query_terms = terms(query)
@@ -77,8 +115,9 @@ class MemPalaceMemory:
         return len(ids_to_delete)
 
     def forget_all(self, user_id: str) -> int:
-        count = len(self.list_facts(user_id))
-        if count:
+        result = self._collection.get(where={"user_id": user_id})
+        count = len(result.ids)
+        if result.ids:
             self._collection.delete(where={"user_id": user_id})
         return count
 
@@ -89,6 +128,8 @@ class MemPalaceMemory:
         )
         facts: list[MemoryFact] = []
         for fact_id, document, metadata in zip(result.ids, result.documents, result.metadatas):
+            if metadata.get("room", FACTS_ROOM) != FACTS_ROOM:
+                continue
             facts.append(
                 MemoryFact(
                     id=fact_id,
