@@ -36,7 +36,7 @@ client_assets_dir = client_dist_dir / "assets"
 if client_assets_dir.exists():
     app.mount("/assets", StaticFiles(directory=client_assets_dir), name="assets")
 
-# память временно заменена на объект заглушки
+
 llm_client = OpenRouterClient(settings)
 memory = build_memory(settings)
 chat_history = build_chat_history_store(
