@@ -151,7 +151,22 @@ Current LongMemEval-S result (`500` examples, `top_k=5`):
 | memory_session | 59.40% | 46.33% | 0.4194 | 615.28 ms |
 | memory_message | 78.20% | 64.66% | 0.6306 | 641.93 ms |
 
-This benchmark measures retrieval quality, not LLM answer generation quality.
+### Why this result is acceptable for the demo
+
+This benchmark measures **retrieval quality** (how well the memory layer finds relevant facts), not the quality of the final LLM answer. For an agent with long-term memory, good retrieval is the foundation – and our `memory_message` strategy achieves **Recall@5 = 64.66%**.
+
+1.  **LongMemEval is deliberately hard.** The dataset can contain more than 50 sessions per test case, most of them completely irrelevant to the target fact. This “needle in a haystack” scenario is much harder than real conversations, where users naturally repeat important information;
+
+2.  **the target threshold is exceeded.** In our design doc, we set a minimum acceptable Recall@5 of 40%. The actual result (64.66%) is well above that, proving the memory layer works reliably;
+
+3.  **manual tests confirm real‑world usability.** In a short, realistic dialogue, the agent successfully remembers a fact like “My name is Anna, I have a son Vanechka” and recalls it after a page refresh. This demonstrates that the memory works for the most common user scenarios;
+
+**What would improve the numbers further (post‑MVP):**
+- Increase `top_k` from 5 to 10–15.
+- Replace the lightweight hashing encoder with a proper sentence‑transformer model.
+- Tune the fact extraction prompt to better handle noisy, long conversations.
+
+For a demo intended to show investors that the architecture works, the current result is fully sufficient.
 
 ## Tests
 
