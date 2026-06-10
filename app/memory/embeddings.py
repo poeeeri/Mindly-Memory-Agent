@@ -6,6 +6,8 @@ import re
 EMBEDDING_DIM = 384
 
 
+# рассказать про хэш-эмбуддинги и почему мы их выбрали
+# (https://sieunpark77.medium.com/what-are-hash-embeddings-217759886d0c)
 def embed_text(text: str, dimensions: int = EMBEDDING_DIM) -> list[float]:
     vector = [0.0] * dimensions
     tokens = _tokens(text)
@@ -16,6 +18,7 @@ def embed_text(text: str, dimensions: int = EMBEDDING_DIM) -> list[float]:
     for feature in features:
         digest = hashlib.blake2b(feature.encode("utf-8"), digest_size=8).digest()
         bucket = int.from_bytes(digest[:4], "little") % dimensions
+        # про коллизии
         sign = 1.0 if digest[4] % 2 == 0 else -1.0
         vector[bucket] += sign
 
@@ -33,4 +36,5 @@ def _char_ngrams(text: str, *, size: int) -> list[str]:
     compact = re.sub(r"\s+", " ", text.lower()).strip()
     if len(compact) < size:
         return []
+    # список n-грамм из норм-го тиекста (рассказать зачем нужны n-граммы в нашем случае)
     return [compact[index : index + size] for index in range(len(compact) - size + 1)]

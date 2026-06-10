@@ -37,13 +37,18 @@ if client_assets_dir.exists():
     app.mount("/assets", StaticFiles(directory=client_assets_dir), name="assets")
 
 
+# рассказать про стриминг ответа
 llm_client = OpenRouterClient(settings)
+
+# реализация long-term памяти 
 memory = build_memory(settings)
 chat_history = build_chat_history_store(
     backend=settings.chat_history_backend,
     database_url=settings.database_url,
     max_messages=settings.chat_history_max_messages,
 )
+
+# рассказать про граф и как он работает, как происходит генерация ответа и сохранение в память
 mindly_graph = MindlyGraph(
     memory=memory,
     llm=llm_client,

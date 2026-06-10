@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     use_fake_llm: bool = False
     history_window: int = 8
     memory_refresh_mode: str = "manual"
-    memory_refresh_window: int = 20
+    memory_refresh_window: int = 10
     chat_history_backend: str = "memory"
     chat_history_max_messages: int = 0
     database_url: str = "postgresql://mindly:mindly@127.0.0.1:5432/mindly"
