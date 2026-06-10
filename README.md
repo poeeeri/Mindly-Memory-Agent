@@ -79,6 +79,7 @@ The default OpenRouter model is `google/gemini-2.5-flash`: it is paid, but relat
 4. Send: `Забудь, что у меня есть сын Костик.`
 5. Send: `Что ты помнишь обо мне?`
 
+![Demo](docs/demo.gif)
 
 Memory records are stored as structured facts:
 
